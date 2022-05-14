@@ -63,11 +63,14 @@ function getPointGen() {
     
     if(hasUpgrade("p3", 11)) gain = gain.mul(upgradeEffect("p3", 11));
     
+	gain = gain.mul(layers["b"].effect())
+
     let pow = new Decimal(1);
     
     if(hasUpgrade("p2", 25)) pow = pow.mul(upgradeEffect("p2", 25));
     
     if(hasUpgrade("p3", 13)) pow = pow.mul(upgradeEFfect("p3", 14));
+	if(hasUpgrade("p3", 22)) pow = pow.mul(upgradeEFfect("p3", 22));
     
 	let total = gain.pow(pow)
     

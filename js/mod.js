@@ -20,7 +20,8 @@ let VERSION = {
 let changelog = `<h1>Changelog:</h1><br>
 	<h3>v0.0</h3><br>
 		- Added things.<br>
-		- Added stuff.`
+		- Added stuff.<br>
+		-I LOVE YOU MAKI <3333`
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
@@ -50,6 +51,8 @@ function getPointGen() {
     if(hasUpgrade("p", 14)) gain = gain.mul(upgradeEffect("p", 14));
     if(hasUpgrade("p", 15)) gain = gain.mul(upgradeEffect("p", 15));
     
+	if(hasUpgrade("p", 31)) gain = gain.mul(upgradeEffect("p", 31));
+
     gain = gain.mul(layers["p2"].effect());
     
     if(hasUpgrade("p2", 11)) gain = gain.mul(upgradeEffect("p2", 11));
@@ -69,8 +72,8 @@ function getPointGen() {
     
     if(hasUpgrade("p2", 25)) pow = pow.mul(upgradeEffect("p2", 25));
     
-    if(hasUpgrade("p3", 13)) pow = pow.mul(upgradeEFfect("p3", 14));
-	if(hasUpgrade("p3", 22)) pow = pow.mul(upgradeEFfect("p3", 22));
+    if(hasUpgrade("p3", 15)) pow = pow.mul(upgradeEffect("p3", 15));
+	if(hasUpgrade("p3", 22)) pow = pow.mul(upgradeEffect("p3", 22));
     
 	let total = gain.pow(pow)
     

@@ -133,7 +133,6 @@ addLayer("p", {
             cost: new Decimal(100),
             effect(){
                 let effect = new Decimal(2); 
-                if(hasUpgrade(this.layer, 31)) effect = effect.add(upgradeEffect(this.layer, 31));
                 return effect
             },
             effectDisplay(){
@@ -204,15 +203,21 @@ addLayer("p", {
             }
         },
         31: {
-            description: "Above upgrade effect +log10(log10(points))",
+            description: "Multiply Point gain by 1.05 for every upgrade purchased across all menus.",
             cost: new Decimal("1e9"),
             effect(){
-                let effect = Decimal.log(Decimal.log(player.points.add(1), 10).add(1), 10);
+                let numUpgrades = new Decimal(0);
+
+                for(const key of LAYERS){
+                    numUpgrades = numUpgrades.add(player[key].upgrades.length)
+                }
+
+                let effect = new Decimal(1.05).pow(numUpgrades)
                 
                 return effect;
             },
             effectDisplay(){
-                return "+" + format(upgradeEffect(this.layer, this.id));   
+                return "x" + format(upgradeEffect(this.layer, this.id));   
             },
             unlocked(){
                 return hasUpgrade("p3", 12) && hasUpgrade("p", 15);   
@@ -250,7 +255,7 @@ addLayer("p", {
         },
         34: {
             description: "Above upgrade effect +log10(log10(points))",
-            cost: new Decimal("1e12"),
+            cost: new Decimal("1e15"),
             effect(){
                 let effect = Decimal.log(Decimal.log(player.points.add(1), 10).add(1), 10);
                 
@@ -265,7 +270,7 @@ addLayer("p", {
         },
         35: {
             description: "Above upgrade effect +log10(log10(points))",
-            cost: new Decimal("1e15"),
+            cost: new Decimal("1e20"),
             effect(){
                 let effect = Decimal.log(Decimal.log(player.points.add(1), 10).add(1), 10);
                 
@@ -314,6 +319,9 @@ addLayer("p", {
                 player[this.layer].upgrades.push(id);
             }
         }
+    },
+    autoUpgrade(){
+        return hasMilestone("b", 4)
     }
 })
 
@@ -349,6 +357,11 @@ addLayer("p2", {
     gainExp() { // Calculate the exponent on main currency from bonuses
         return new Decimal(1)
     },
+    passiveGeneration(){
+        let gen = new Decimal(0)
+
+        return gen;
+    },
     row: 1, // Row the layer is in on the tree (0 is the first row)
     branches: ["p"],
     upgrades: {
@@ -368,7 +381,7 @@ addLayer("p2", {
             effect(){
                 let effect = Decimal.log(new Decimal(player.timePlayed).add(1), new Decimal(10)).add(1);
 
-                if(hasUpgrade("p3", 15)) effect = effect.pow(upgradeEffect("p3", 15))
+                if(hasUpgrade("p3", 16)) effect = effect.pow(upgradeEffect("p3", 16))
 
                 return effect
             },
@@ -398,7 +411,7 @@ addLayer("p2", {
         },
         15: {
             description: "Keep the first 5 prestige upgrades on reset.  Also Make Multiplication Points 10x cheaper.  Also unlock the next row of upgrades.", 
-            cost: new Decimal(25),
+            cost: new Decimal(15),
             effect(){
                 return new Decimal(10)   
             },
@@ -525,7 +538,7 @@ addLayer("p2", {
                 return effect
             },
             rewardDisplay(){
-                return "Point gain x"+format(challengeEffect(this.layer, this.id))   
+                return "Prestige Point gain x"+format(challengeEffect(this.layer, this.id))   
             },
             unlocked(){
                 return hasUpgrade(this.layer, 24)   
@@ -562,6 +575,9 @@ addLayer("p2", {
         if(hasUpgrade("p3", 14)){
             savingupgradeids.push(14)   
         }
+        if(hasUpgrade("p3", 21)){
+            savingupgradeids.push(15)
+        }
         
         
         var prevupgrades = player[this.layer].upgrades;
@@ -585,8 +601,7 @@ addLayer("m", {
     position: 0, // Horizontal position within a row. By default it uses the layer id and sorts in alphabetical order
     startData() { return {
         unlocked: false,
-		points: new Decimal(0),
-        hasAutoPrestigeActive: false
+		points: new Decimal(0)
     }},
     color: "#DDDD00",
     requires: new Decimal("5e3"), // Can be a function that takes requirement increases into account
@@ -604,7 +619,7 @@ addLayer("m", {
         if(hasUpgrade(this.layer, 11)) mult=mult.div(upgradeEffect(this.layer, 12));
         
         if(hasUpgrade("p3", 13)) mult = mult.div(upgradeEffect("p3", 13));
-        if(hasUpgrade("p3", 15)) mult = mult.div(upgradeEffect("p3", 15));
+        if(hasUpgrade("p3", 16)) mult = mult.div(upgradeEffect("p3", 16));
         
         return mult
     },
@@ -639,6 +654,45 @@ addLayer("m", {
             unlocked(){
                 return hasUpgrade("p2", 23)   
             }
+        },
+        21: {
+            description: "Boost Juice Multiplier also divides Multiplication Point cost",
+            cost: new Decimal(10),
+            effect(){
+                return layers["b"].effect()
+            },
+            effectDisplay(){
+                return "/" + format(upgradeEffect(this.layer, this.id))
+            },
+            unlocked(){
+                return hasUpgrade("p3", 24)
+            }
+        },
+        22: {
+            description: "Divide Multiplication Point cost by Multiplication Points",
+            cost: new Decimal(12),
+            effect(){
+                return player["m"].points.add(1)
+            },
+            effectDisplay(){
+                return "/" + format(upgradeEffect(this.layer, this.id))
+            },
+            unlocked(){
+                return hasUpgrade("p3", 24)
+            }
+        },
+        23: {
+            description: "Divide Multiplication Point cost by the single Multiplication Point Multiplier ^ 3",
+            cost: new Decimal(15),
+            effect(){
+                return layers[this.layer].multiplicationPointEffect().pow(new Decimal(3))
+            },
+            effectDisplay(){
+                return "/" + format(upgradeEffect(this.layer, this.id))
+            },
+            unlocked(){
+                return hasUpgrade("p3", 24)
+            }
         }
     },
     layerShown(){return true},
@@ -661,7 +715,13 @@ addLayer("m", {
         return effect;
     },
     autoPrestige(){
-        return hasMilestone("b", 2) && player[this.layer].hasAutoPrestigeActive
+        return hasMilestone("b", 2)
+    },
+    autoUpgrade(){
+        return hasMilestone("b", 5)
+    },
+    resetsNothing(){
+        return hasMilestone("b", 6)
     }
 })
 
@@ -683,6 +743,9 @@ addLayer("p3", {
     gainMult() { // Calculate the multiplier for main currency from bonuses
         mult = new Decimal(1)
         
+        if(hasUpgrade(this.layer, 25)) mult = mult.mul(upgradeEffect(this.layer, 25))
+        if(hasUpgrade(this.layer, 14)) mult = mult.mul(upgradeEffect(this.layer, 14))
+
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
@@ -692,10 +755,10 @@ addLayer("p3", {
     branches: ["p2", "m"],
     upgrades: {
         11: {
-            description: "Triple Point gain, Prestige Point gain and prestige 2 point gain",
+            description: "Double Point gain, Prestige Point gain and prestige 2 point gain",
             cost: new Decimal(1),
             effect(){
-                return new Decimal(3);   
+                return new Decimal(2);   
             },
             effectDisplay(){
                 return "x" + format(upgradeEffect(this.layer, this.id));   
@@ -715,7 +778,17 @@ addLayer("p3", {
                 return "/" + format(upgradeEffect(this.layer, this.id))   
             }
         },
-        14: {
+        14:{
+            description: "Prestige 3 Point gain is multiplied by log10(prestige 3 points)",
+            cost: new Decimal(15),
+            effect(){
+                return Decimal.log(player[this.layer].points.add(1), 10).add(1)
+            },
+            effectDisplay(){
+                return "x" + format(upgradeEffect(this.layer, this.id))
+            }
+        },
+        15: {
             description: "Point gain is raised ^ log10(log10(log10(prestige 3 points))).  Also keep the fourth prestige 2 upgrade on reset.",
             cost: new Decimal(25),
             effect(){
@@ -726,27 +799,27 @@ addLayer("p3", {
                 return "^" + format(upgradeEffect(this.layer, this.id))   
             }
         },
-        15: {
+        16: {
             description: "Square the effect of the second Prestige 2 upgrade, divide multiplier cost by 2 and unlock the next row of upgrades.",
             cost: new Decimal(100),
             effect(){
                 return new Decimal(2);
             },
             effectDisplay(){
-                return "^" + format(upgradeEffect(this.layer, this.id))
+                return "^" + format(upgradeEffect(this.layer, this.id)) + ",<br> /" + format(upgradeEffect(this.layer, this.id)) 
             }
         },
         21: {
-            description: "Double duck feather gain",
+            description: "Triple duck feather gain, keep the fifth prestige 2 upgrade on reset",
             cost: new Decimal(500),
             effect(){
-                return new Decimal(2);
+                return new Decimal(3);
             },
             effectDisplay(){
                 return "x" + format(upgradeEffect(this.layer, this.id));
             },
             unlocked(){
-                return hasUpgrade(this.layer, 15);
+                return hasUpgrade(this.layer, 16);
             }
         },
         22: {
@@ -759,7 +832,40 @@ addLayer("p3", {
                 return "^" + format(upgradeEffect(this.layer, this.id))
             },
             unlocked(){
-                return hasUpgrade(this.layer, 15)
+                return hasUpgrade(this.layer, 16)
+            }
+        },
+        23: {
+            description: "Boost Juice softcap is based on Boosters ^2 instead of Boosters ^1",
+            cost: new Decimal(5000),
+            effect(){
+                return new Decimal(2)
+            },
+            effectDisplay(){
+                return "^" + format(upgradeEffect(this.layer, this.id))
+            },
+            unlocked(){
+                return hasUpgrade(this.layer, 16)
+            }
+        },
+        24: {
+            description: "Unlock 3 More Multiplication Upgrades",
+            cost: new Decimal(25000),
+            unlocked(){
+                return hasUpgrade(this.layer, 16)
+            }
+        },
+        25: {
+            description: "Boost Juice Multiplier Applies to Prestige 3 Points with reduced effect (^0.25)",
+            cost: new Decimal("5e5"),
+            effect(){
+                return layers["b"].effect().pow(new Decimal(0.25))
+            },
+            effectDescription(){
+                return "x" + format(upgradeEffect(this.layer, this.id))
+            },
+            unlocked(){
+                return hasUpgrade(this.layer, 16)
             }
         }
     },
@@ -783,12 +889,13 @@ addLayer("d", {
         duckfeathers: new Decimal(0)
     }},
     color: "#5e3200",
-    requires: new Decimal(8), // Can be a function that takes requirement increases into account
+    requires: new Decimal(9), // Can be a function that takes requirement increases into account
     resource: "Ducks", // Name of prestige currency
     baseResource: "multiplication points", // Name of resource prestige is based on
     baseAmount() {return player["m"].points}, // Get the current amount of baseResource
     type: "static", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 1, // Prestige currency exponent
+    base: 1.5,
     gainMult() { // Calculate the multiplier for main currency from bonuses
         mult = new Decimal(1)
         
@@ -802,23 +909,27 @@ addLayer("d", {
     buyables: {
         11: {
             cost(x){
-                return new Decimal(0.01).mul(new Decimal(3).pow(x))
+                let cost = new Decimal(0.01).mul(new Decimal(2).pow(x))
+
+                cost = cost.div(buyableEffect(this.layer, 21))
+
+                return cost
             },
             effect(){
-                let effect = new Decimal(0.01).mul(getBuyableAmount(this.layer, this.id));
+                let effect = new Decimal(0.05).mul(getBuyableAmount(this.layer, this.id));
 
                 return effect
             },
             display(){
-                let description = "Adds +0.01 to the multiplication point effect per level"
+                let description = "Adds +0.05 to the multiplication point effect per level"
                 let amounttext = "Bought: " + format(getBuyableAmount(this.layer, this.id))
                 let costtext = "Cost: " + format(this.cost(getBuyableAmount(this.layer, this.id))) + " Duck Feathers"
                 let effecttext = "Currently: +" + format(buyableEffect(this.layer, this.id))
                 
-                return description + "<br>" + amounttext + "<br>" + costtext + "<br>" + effectext
+                return description + "<br>" + amounttext + "<br>" + costtext + "<br>" + effecttext
             },
             canAfford(){
-                return player[this.layer].duckfeathers.lte(this.cost(getBuyableAmount(this.layer, this.id)))
+                return player[this.layer].duckfeathers.gte(this.cost(getBuyableAmount(this.layer, this.id)))
             },
             buy(){
                 player[this.layer].duckfeathers = player[this.layer].duckfeathers.sub(this.cost(getBuyableAmount(this.layer, this.id)))
@@ -827,15 +938,19 @@ addLayer("d", {
         },
         12: {
             cost(x){
-                return new Decimal(0.1).mul(new Decimal(5).pow(x))
+                let cost = new Decimal(0.1).mul(new Decimal(3).pow(x))
+
+                cost = cost.div(buyableEffect(this.layer, 21))
+
+                return cost
             },
             effect(){
-                let effect = new Decimal(1.1).pow(getBuyableAmount(this.layer, this.id))
+                let effect = new Decimal(2).pow(getBuyableAmount(this.layer, this.id))
 
                 return effect
             },
             display(){
-                let description = "Divides Multiplication Point cost by 1.1 per level"
+                let description = "Divides Multiplication Point cost by 2 per level"
                 let amounttext = "Bought: " + format(getBuyableAmount(this.layer, this.id))
                 let costtext = "Cost: " + format(this.cost(getBuyableAmount(this.layer, this.id))) + " Duck Feathers"
                 let effecttext = "Currently: /" + format(buyableEffect(this.layer, this.id))
@@ -843,7 +958,65 @@ addLayer("d", {
                 return description + "<br>" + amounttext + "<br>" + costtext + "<br>" + effecttext
             },
             canAfford(){
-                return player[this.layer].duckfeathers.lte(this.cost(getBuyableAmount(this.layer, this.id)))
+                return player[this.layer].duckfeathers.gte(this.cost(getBuyableAmount(this.layer, this.id)))
+            },
+            buy(){
+                player[this.layer].duckfeathers = player[this.layer].duckfeathers.sub(this.cost(getBuyableAmount(this.layer, this.id)))
+                addBuyables(this.layer, this.id, 1);
+            }
+        },
+        13: {
+            cost(x){
+                let cost = new Decimal(0.05).mul(new Decimal(2).pow(x))
+
+                cost = cost.div(buyableEffect(this.layer, 21))
+
+                return cost
+            },
+            effect(){
+                let effect = new Decimal(1).add(new Decimal(0.2).mul(getBuyableAmount(this.layer, this.id)))
+
+                return effect
+            },
+            display(){
+                let description = "Multiplies Duck Feather gain by +0.2x per level"
+                let amounttext = "Bought: " + format(getBuyableAmount(this.layer, this.id))
+                let costtext = "Cost: " + format(this.cost(getBuyableAmount(this.layer, this.id))) + " Duck Feathers"
+                let effecttext = "Currently: x" + format(buyableEffect(this.layer, this.id))
+
+                return description + "<br>" + amounttext + "<br>" + costtext + "<br>" + effecttext
+            },
+            canAfford(){
+                return player[this.layer].duckfeathers.gte(this.cost(getBuyableAmount(this.layer, this.id)))
+            },
+            buy(){
+                player[this.layer].duckfeathers = player[this.layer].duckfeathers.sub(this.cost(getBuyableAmount(this.layer, this.id)))
+                addBuyables(this.layer, this.id, 1);
+            }
+        },
+        21: {
+            cost(x){
+                let cost = new Decimal(0.1).mul(new Decimal(5).pow(x))
+
+                cost = cost.div(buyableEffect(this.layer, 21))
+
+                return cost
+            },
+            effect(){
+                let effect = new Decimal(1).add(getBuyableAmount(this.layer, this.id))
+
+                return effect
+            },
+            display(){
+                let description = "Divides Buyable Costs by +1 per level"
+                let amounttext = "Bought: " + format(getBuyableAmount(this.layer, this.id))
+                let costtext = "Cost: " + format(this.cost(getBuyableAmount(this.layer, this.id))) + " Duck Feathers"
+                let effecttext = "Currently: /" + format(buyableEffect(this.layer, this.id))
+
+                return description + "<br>" + amounttext + "<br>" + costtext + "<br>" + effecttext
+            },
+            canAfford(){
+                return player[this.layer].duckfeathers.gte(this.cost(getBuyableAmount(this.layer, this.id)))
             },
             buy(){
                 player[this.layer].duckfeathers = player[this.layer].duckfeathers.sub(this.cost(getBuyableAmount(this.layer, this.id)))
@@ -858,6 +1031,8 @@ addLayer("d", {
         effect = new Decimal(3).pow(player[this.layer].points.sub(1)).div(new Decimal(1000));
 
         if(hasUpgrade("p3", 21)) effect = effect.mul(upgradeEffect("p2", 21))
+
+        effect = effect.mul(buyableEffect(this.layer, 13))
 
         return effect;
     },
@@ -922,8 +1097,7 @@ addLayer("b", {
             done(){return player[this.layer].points.gte(4)},
             unlocked(){
                 return (player["m"].points.gte(1) && hasMilestone(this.layer, this.id - 1)) || hasMilestone(this.layer, this.id)
-            },
-            toggles: [["m", "hasAutoPrestigeActive"]]
+            }
         },
         3: {
             requirementDescription: "7 Boosters",
@@ -931,6 +1105,30 @@ addLayer("b", {
             done(){return player[this.layer].points.gte(7)},
             unlocked(){
                 return (hasUpgrade("p2", 14) && hasMilestone(this.layer, this.id - 1)) || hasMilestone(this.layer, this.id)
+            }
+        },
+        4: {
+            requirementDescription: "11 Boosters",
+            effectDescription: "Autobuy Prestige Upgrades",
+            done(){return player[this.layer].points.gte(11)},
+            unlocked(){
+                return hasMilestone(this.layer, this.id - 1);
+            }
+        },
+        5: {
+            requirementDescription: "20 Boosters",
+            effectDescription: "Automatically purchase Multiplication Upgrades",
+            done(){return player[this.layer].points.gte(20)},
+            unlocked(){
+                return hasMilestone(this.layer, this.id - 1)
+            }
+        },
+        6: {
+            requirementDescription: "25 Boosters",
+            effectDescription: "Buying Multiplication Points doesn't reset anything",
+            done(){return player[this.layer].points.gte(25)},
+            unlocked(){
+                return hasMilestone(this.layer, this.id - 1)
             }
         }
     },
@@ -943,7 +1141,11 @@ addLayer("b", {
         "<br> Boost Juice is multiplying Point, Prestige Point, and Prestige 2 Point gain by " + format(layers[this.layer].effect())
     },
     juiceSoftcap(){
-        return new Decimal(10).mul(player[this.layer].points)
+        let effectivepoints = player[this.layer].points
+
+        if(hasUpgrade("p3", 23)) effectivepoints = effectivepoints.pow(upgradeEffect("p3", 23))
+
+        return new Decimal(10).mul(effectivepoints)
     },
     juiceSoftcapPower(){
         return new Decimal(1/3)
